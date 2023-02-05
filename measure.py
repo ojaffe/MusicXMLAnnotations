@@ -90,10 +90,7 @@ class Measure:
         staff, voice, has_dot, is_chord, dur, is_grace, stem_down, articulation = 0, 1, False, False, 0, False, True, ''
         for e in note:
             if e.tag == 'staff':    # Staff number of note
-                # Only read notes of first staff, skip otherwise
-                staff = int(e.text) - 1
-                if (staff > 0):
-                    return 'multi-staff', True, voice, dur, is_grace, articulation
+                voice = int(e.text) - 1
             if e.tag == 'voice':    # Voice number of note
                 voice = int(e.text)
             if e.tag == 'dot':      # Dot modifier for note duration
@@ -196,17 +193,22 @@ class Measure:
             if e.tag == 'staff':
                 staff = int(e.text) - 1
 
-        pattern = re.compile("[A-Za-z.]+")
-
+        pattern = re.compile("[A-Za-z.-]+")
         # Iterate through all elements in direction obj
         for elem in direction:
-
+        
             if elem.tag == 'direction-type':
-                if elem[0].tag == 'dynamics' and pattern.fullmatch(elem[0][0].tag):
-                    sequence[staff] += elem[0][0].tag + '-dynamic' + ' '
-
-                if elem[0].tag == 'words' and elem[0].text is not None and pattern.fullmatch(elem[0].text):
-                    sequence[staff] += elem[0].text + '-dynamic' + ' '
+                for sub in elem:
+                    if sub.tag == 'dynamics' and len(sub.text) > 2:
+                        e = ' '.join(sub[0].tag.split())
+                        e = e.replace(' ', '-')
+                        if pattern.fullmatch(e):
+                            sequence[staff] += e + '-dynamic' + ' '
+                    if sub.tag == 'words' and sub.text is not None and len(sub.text) > 2:
+                        e = ' '.join(sub.text.split())
+                        e = e.replace(' ', '-')
+                        if pattern.fullmatch(e):
+                            sequence[staff] += e + '-dynamic' + ' '
 
 
         return sequence

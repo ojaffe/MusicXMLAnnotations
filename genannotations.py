@@ -8,6 +8,7 @@ def filterForAnnotations(sequences):
     annotations = list()
 
     for seq in sequences:
+        annotations.append("a")
         s = seq.split(' + ')  # Each element is a series of simultaneous tokens
 
         for elem in s:
@@ -90,14 +91,18 @@ if __name__ == '__main__':
             # Write sequence
             sequences = musicxml_obj.get_sequences()
             staves = [[x[0] for x in sequences]] + [[x[1] for x in sequences]]
-            print(len(staves))
+            print(len(staves[0]), len(staves[1]))
+            print(staves[0], staves[1])
 
             # Add new unique tokens to vocab
             sequences = [x for x in staves[0] if x != '']
             sequences_annotations = filterForAnnotations(sequences)
             print(sequences_annotations)
-            #collapseAnnotations(sequences_annotations)
+            print(len([0 for x in sequences_annotations if x == 'barline']))
 
+            sequences = [x for x in staves[1] if x != '']
+            sequences_annotations = filterForAnnotations(sequences)
+            print(sequences_annotations)
             print(len([0 for x in sequences_annotations if x == 'barline']))
         
         except UnicodeDecodeError: # Ignore bad MusicXML

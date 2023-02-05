@@ -29,7 +29,7 @@ class MusicXML():
         self.beat_type = 4
 
         # Track whether current page being labeled is polyphonic or not
-        self.polyphonic_page = False
+        self.polyphonic_page = True
 
         # Read the width and cutoffs for each page of the .musicxml file
         self.get_width()
@@ -226,7 +226,6 @@ class MusicXML():
         # Grace note tracking
         is_grace = False
         prev_grace = False
-
         # Iterate through all elements in measure
         for elem in measure:
 
@@ -236,10 +235,9 @@ class MusicXML():
             is_chord = False    # Used for determining to advance (+ symbol)
 
             if elem.tag == 'attributes':
-
                 # Parse the attributes element
                 # (Skip is number of measures to skip for multirest)
-                cur_elem,skip,self.beat,self.beat_type = m.parse_attributes(elem)
+                cur_elem, skip, self.beat, self.beat_type = m.parse_attributes(elem)
 
                 # Skip percussion/guitar music
                 if 'percussion' in cur_elem[0] or 'TAB' in cur_elem[0] or \
@@ -247,10 +245,17 @@ class MusicXML():
                     self.clef = 'percussion'
                     return ['' for _ in range(num_staves)], 0
 
+                # Add to all staves
+                for i in range(num_staves):
+                    if (cur_staves[i] != '' or staves[i] != '') and not is_chord and cur_elem[i] != '':
+                        staves[i] += '+ ' + cur_elem[i]
+                    else:
+                        staves[i] += cur_elem[i]
+
             elif elem.tag == 'note':
 
                 # Parse note element and get the symbolic representation of it
-                cur_elem,is_chord,voice,duration,is_grace,_ = m.parse_note(elem)
+                cur_elem, is_chord, voice, duration, is_grace, _ = m.parse_note(elem)
 
                 # Check if new voice started
                 if cur_voice != voice and cur_voice != -1:
@@ -263,10 +268,6 @@ class MusicXML():
 
                 cur_voice = voice
 
-                # Skip multi staff notes
-                if cur_elem == 'multi-staff':
-                    continue
-
                 # No print object case, include a duration, but don't generate symbol
                 if cur_elem == 'forward':
 
@@ -276,7 +277,6 @@ class MusicXML():
                         forward_dur.append(duration)
 
                 else:
-
                     # Update voicing stuff (for multi voice aka polyphony)
                     if voice not in voice_lines:
                         voice_lines[voice] = []
@@ -304,6 +304,12 @@ class MusicXML():
                             voice_durations[voice].append(0)
                             voice_lines[voice].append(cur_elem[0])
                             voice_durations[voice].append(duration)
+
+                # Add to stave
+                if (cur_staves[voice] != '' or staves[voice] != '') and not is_chord and cur_elem[0] != '':
+                    staves[voice] += '+ ' + cur_elem[0]
+                else:
+                    staves[voice] += cur_elem[0]
                         
             elif elem.tag == 'direction':       # Parse direction element
                 cur_elem = m.parse_direction(elem)
@@ -325,14 +331,15 @@ class MusicXML():
                 cur_voice = -1
 
             # Add whatever was read to the staves
-            for i in range(num_staves):
-                if 'multirest' in cur_elem[0]:
-                    pass
-                if cur_elem != 'forward':
-                    if (cur_staves[i] != '' or staves[i] != '') and not is_chord and cur_elem[i] != '':
-                        staves[i] += '+ ' + cur_elem[i]
-                    else:
-                        staves[i] += cur_elem[i] 
+            if elem.tag != 'attributes' and elem.tag != 'note':
+                for i in range(num_staves):
+                    if 'multirest' in cur_elem[0]:
+                        pass
+                    if cur_elem != 'forward':
+                        if (cur_staves[i] != '' or staves[i] != '') and not is_chord and cur_elem[i] != '':
+                            staves[i] += ' + ' + cur_elem[i]
+                        else:
+                            staves[i] += cur_elem[i] 
 
             # Store current key/time/clef signature if found
             for word in cur_elem[0].split():
@@ -346,7 +353,7 @@ class MusicXML():
                         for v in voice_lines.keys():
                             voice_durations[v].append(0)
                             voice_durations[v].append(0)
-                            voice_lines[v].append('+ ')
+                            voice_lines[v].append(' + ')
                             voice_lines[v].append(word + ' ')
                             
                     self.key = word
@@ -361,7 +368,7 @@ class MusicXML():
                         for v in voice_lines.keys():
                             voice_durations[v].append(0)
                             voice_durations[v].append(0)
-                            voice_lines[v].append('+ ')
+                            voice_lines[v].append(' + ')
                             voice_lines[v].append(word + ' ')
      
                     self.clef = word
@@ -376,7 +383,7 @@ class MusicXML():
                         for v in voice_lines.keys():
                             voice_durations[v].append(0)
                             voice_durations[v].append(0)
-                            voice_lines[v].append('+ ')
+                            voice_lines[v].append(' + ')
                             voice_lines[v].append(word + ' ')
         
                     self.time = word
@@ -392,7 +399,7 @@ class MusicXML():
         # Add measure separator to just one voice
         if len(voice_lines) > 0:
             key = sorted(voice_lines.keys())[0]
-            voice_lines[key].append('+ ')
+            voice_lines[key].append(' + ')
             voice_lines[key].append('barline ')
             voice_durations[key].append(0)
             voice_durations[key].append(0)
@@ -410,140 +417,7 @@ class MusicXML():
 
         # Add measure separator to each staff
         for i in range(num_staves):
-            staves[i] = staves[i] + '+ barline '
-
-        # Rearrange measure notes order based on voice durations for multivoice music
-        if len(voice_lines) > 1:
-
-            # Indicate that this page is polyphonic
-            self.polyphonic_page = True
-
-            # Add durations incase problem with one of the voices
-            keys = sorted(voice_lines.keys())
-            max_sum = max([sum(voice_durations[k]) for k in keys])
-            for k in keys:
-                if sum(voice_durations[k]) < max_sum:
-                    voice_lines[k].append('')
-                    voice_durations[k].append(max_sum - sum(voice_durations[k]))
-
-            # Initialize values before combining voices in label
-            staves[0] = ''
-            min_sum = 0
-            total = 0
-            voice_idxs = dict()
-            voice_sums = dict()
-            for voice in voice_lines:
-                voice_idxs[voice] = 0
-                voice_sums[voice] = 0
-                total = max(total, sum(voice_durations[voice]))
-            notes_to_add = []
-
-            c = 0   # Counter for infinite loop corner case
-            while min_sum < total:
-                
-                # Break out of loop if necessary
-                c += 1          
-                if c >= 100:
-                    print('Loop broken')
-                    return ['' for x in range(num_staves)], 0
-                    
-                # Track the sum of durations of each voice for ordering purposes in labeling 
-                cur_sums = []
-                for voice in voice_lines:
-                    cur_sums.append(voice_sums[voice])
-                min_sum = min(cur_sums)
-
-                for voice in voice_lines:
-
-                    # Add all sums that are equal to min to current timestep 
-                    if voice_sums[voice] == min_sum and voice_idxs[voice] < len(voice_lines[voice]):
-
-                        if (len(notes_to_add) == 0 or (notes_to_add[-1] != '+ ' or voice_lines[voice][voice_idxs[voice]] != '+ ')) \
-                            and voice_lines[voice][voice_idxs[voice]] != 'forward':
-                            notes_to_add.append(voice_lines[voice][voice_idxs[voice]])
-                        
-                        # Update current voice
-                        voice_sums[voice] += voice_durations[voice][voice_idxs[voice]]
-                        voice_idxs[voice] += 1
-                        
-                        # Add the rest of chord if relevant (keep adding till + encountered)
-                        while voice_idxs[voice] < len(voice_lines[voice]) and \
-                              ((voice_lines[voice][voice_idxs[voice]] != '+ ' and \
-                              notes_to_add[-1] != '+ ') or \
-                              voice_lines[voice][voice_idxs[voice]] == 'barline '):
-                              
-                            # Only add if not a 'forward'
-                            if voice_lines[voice][voice_idxs[voice]] != 'forward':
-                                notes_to_add.append(voice_lines[voice][voice_idxs[voice]])
-
-                            voice_sums[voice] += voice_durations[voice][voice_idxs[voice]]
-                            voice_idxs[voice] += 1
-                        
-
-                    min_sum = min(min_sum, voice_sums[voice])
-
-            staff_zero = ''
-            
-            idx = 0
-            while idx < len(notes_to_add):
-
-                # Get all symbols from idx till symbol is add
-                symbols = [notes_to_add[idx]]
-                idx += 1
-                while '+ ' not in symbols and idx < len(notes_to_add):
-                    symbols.append(notes_to_add[idx])
-                    idx += 1
-                if '+ ' in symbols:
-                    symbols.remove('+ ')
-
-                # If no symbols (only +) skip
-                if len(symbols) == 0:
-                    continue
-
-                # Sort symbols top to bottom
-                symbols.sort(key=functools.cmp_to_key(self.compare_symbols))
-
-                # Add each symbol to staff string
-                staff_zero += '+ ' + ''.join(symbols)
-            
-            # Remove leading '+' from string
-            staves[0] = staff_zero
-
-        # Add clef and key signature to front if new page and not already included
-        for i in range(num_staves):
-
-            if len(voice_lines) > 1:    # Add time/key/clef to polyphonic
-                
-                time_added = False
-                key_added = False
-                if new_score:
-                    if 'time' not in ''.join(staves[i].split()[:5]):
-                        staves[i] = start_time + ' ' + staves[i]
-                        time_added = True
-                if new_page:
-                    if 'key' not in ''.join(staves[i].split()[:5]):
-                        if time_added:
-                            staves[i] = start_key + ' + ' + staves[i]
-                        else:
-                            staves[i] = start_key + ' ' + staves[i]
-                        key_added = True
-                    if 'clef' not in ''.join(staves[i].split()[:5]):
-                        if time_added or key_added:
-                            staves[i] = start_clef + ' + ' + staves[i]
-                        else:
-                            staves[i] = start_clef + ' ' + staves[i]
-                        
-
-            else:                       # Add time/key/clef to monophonic
-                
-                if new_score:       
-                    if 'time' not in ''.join(staves[i].split()[:5]):
-                        staves[i] = start_time + ' ' + staves[i]
-                if new_page:
-                    if 'key' not in ''.join(staves[i].split()[:5]):
-                        staves[i] = start_key  + ' + ' + staves[i]
-                    if 'clef' not in ''.join(staves[i].split()[:5]):
-                        staves[i] = start_clef + ' + ' + staves[i]
+            staves[i] = staves[i] + ' + barline '
 
         return staves, skip
 
