@@ -154,8 +154,8 @@ def calculateAnnotationTimes(staves, sequence):
     return annotation_times
 
 
-def gen_annotations(args):
-    musicxml_obj = MusicXML(input_file=args.input)
+def gen_annotations(input_file, time, verbose):
+    musicxml_obj = MusicXML(input_file=input_file)
 
     try:
         sequences = musicxml_obj.get_sequences()
@@ -169,30 +169,22 @@ def gen_annotations(args):
         raise Exception('Decoded staves have different lengths')
 
     merged = get_bar_annotations(staves)
-    if args.verbose:
+    if verbose:
         print('Merged annotations:\n', merged)
 
-    if args.time:
+    if time:
         merged = calculateAnnotationBars(staves, merged)
-        if args.verbose:
+        if verbose:
             print('Times:\n', merged)
     
     return merged
 
 
-if __name__ == '__main__':
+def main(input_file, time, verbose):
     """
-    Command line args:
-
-    -input <input directory with MusicXMLS>
-    --verbose
+    input_dir: <input directory with MusicXMLS>
+    time: -
+    verbose: -
     """
 
-    # Parse command line arguments for input/output directories
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-input', dest='input', type=str, required='-c' not in sys.argv, help='Path to the input directory with MusicXMLs.')
-    parser.add_argument('--time', dest='time', action='store_true')
-    parser.add_argument('--verbose', dest='verbose', action='store_true')
-    args = parser.parse_args()
-
-    gen_annotations(args)
+    return gen_annotations(input_file, time, verbose)
