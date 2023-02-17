@@ -95,7 +95,33 @@ def get_first_bar_time(sequence):
 
     return counter
 
+
+def calculateAnnotationBars(staves, sequence):
+    """
+    Returns list of pairs of (annotation, bar_idx)
+    """
+    # Get time of first bar in top stave
+    first_bar_time = get_first_bar_time(staves[0])
+
+    time_sig_dict = {
+        'C/': 1,
+        '4/8': 4/8,
+        '3/8': 3/8,
+    }
+
+    annotation_times = list()
+    for idx, bar in enumerate(sequence):
+        for elem in bar:
+            if 'timeSignature' not in elem:
+                annotation_times.append((idx, elem))
+
+    return annotation_times
+
+
 def calculateAnnotationTimes(staves, sequence):
+    """
+    Returns list of pairs of (annotation, beats since piece start)
+    """
     # Get time of first bar in top stave
     first_bar_time = get_first_bar_time(staves[0])
 
@@ -147,7 +173,7 @@ def gen_annotations(args):
         print('Merged annotations:\n', merged)
 
     if args.time:
-        merged = calculateAnnotationTimes(staves, merged)
+        merged = calculateAnnotationBars(staves, merged)
         if args.verbose:
             print('Times:\n', merged)
     
