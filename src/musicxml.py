@@ -6,7 +6,7 @@ by parsing it
 import sys
 import xml.etree.ElementTree as ET 
 
-from structure.measure import Measure
+from .measure import Measure
 
 import functools
 

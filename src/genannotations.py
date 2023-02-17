@@ -1,7 +1,7 @@
 import sys
 import os
 import argparse
-from structure.musicxml import MusicXML
+from .musicxml import MusicXML
 
 
 def filterForAnnotations(sequences, include_notes=False, include_rests=False):
