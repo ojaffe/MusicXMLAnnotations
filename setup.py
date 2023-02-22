@@ -6,5 +6,5 @@ setuptools.setup(
     version="0.0.1",
     author="Me",
     description="",
-    packages=["src"],
+    packages=["musicxmlannotations"],
 )
