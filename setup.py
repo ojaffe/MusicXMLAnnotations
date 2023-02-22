@@ -2,9 +2,9 @@ import setuptools
 
 
 setuptools.setup(
-    name="MusicXML Annotations",
-    version="1.0",
+    name="musicxmlannotations",
+    version="0.0.1",
     author="Me",
     description="",
-    packages=["src"]
+    packages=["src"],
 )
