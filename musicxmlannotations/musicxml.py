@@ -61,8 +61,7 @@ class MusicXML():
 
             # Check for bad MusicXML
             if defaults_idx == -1:
-                print('MusicXML file:', self.input_file,' missing <score-partwise> or <part>')
-                return
+                raise KeyError('MusicXML file:', self.input_file,' missing <score-partwise> or <part>')
 
             # .MusicXML defines margins separately for odd even pages,
             #  assume they are the same
@@ -122,8 +121,7 @@ class MusicXML():
 
             # Check for bad MusicXML
             if part_list_idx == -1 or part_idx == -1:
-                print('MusicXML file:', self.input_file,' missing <part-list> or <part>')
-                return ['']
+                raise KeyError('MusicXML file:', self.input_file,' missing <part-list> or <part>')
 
             # Get number of staves in the MusicXML
             num_staves = 1
